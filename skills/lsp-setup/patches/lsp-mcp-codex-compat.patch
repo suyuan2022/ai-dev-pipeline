@@ -1,0 +1,224 @@
+diff --git a/src/lsp/manager/core.rs b/src/lsp/manager/core.rs
+index a9ff09d..f3b6f60 100644
+--- a/src/lsp/manager/core.rs
++++ b/src/lsp/manager/core.rs
+@@ -39,6 +39,10 @@ pub struct Manager {
+     ast_grep: AstGrepClient,
+ }
+ 
++fn diagnostics_uri_points_to_existing_file(uri: &Url) -> bool {
++    uri.to_file_path().is_ok_and(|path| path.exists())
++}
++
+ impl Manager {
+     pub async fn new(root_path: &str) -> Result<Self, Box<dyn Error>> {
+         let (tx, _) = channel(100);
+@@ -777,6 +781,10 @@ impl Manager {
+         match file_path {
+             Some(path) => {
+                 let full_path = get_mount_dir().join(path);
++                if !full_path.exists() {
++                    return Ok(all_diagnostics);
++                }
++
+                 let full_path_str = full_path.to_str().ok_or_else(|| {
+                     LspManagerError::InternalError("Invalid file path".to_string())
+                 })?;
+@@ -825,6 +833,9 @@ impl Manager {
+                     let client_diagnostics = locked_client.get_diagnostics_store().get_all().await;
+ 
+                     for (uri, diagnostics) in client_diagnostics {
++                        if !diagnostics_uri_points_to_existing_file(&uri) {
++                            continue;
++                        }
+                         let relative_path = uri_to_relative_path_string(&uri);
+                         all_diagnostics.insert(relative_path, diagnostics);
+                     }
+@@ -981,3 +992,33 @@ impl Manager {
+         Ok(result)
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use tempfile::NamedTempFile;
++
++    #[test]
++    fn diagnostics_uri_points_to_existing_file_returns_true_for_existing_file() {
++        let file = NamedTempFile::new().expect("test temp file should be created");
++        let uri = Url::from_file_path(file.path()).expect("temp path should become file URI");
++
++        assert!(
++            diagnostics_uri_points_to_existing_file(&uri),
++            "existing file diagnostics must be included"
++        );
++    }
++
++    #[test]
++    fn diagnostics_uri_points_to_existing_file_returns_false_for_deleted_file() {
++        let file = NamedTempFile::new().expect("test temp file should be created");
++        let path = file.path().to_path_buf();
++        let uri = Url::from_file_path(&path).expect("temp path should become file URI");
++        drop(file);
++
++        assert!(
++            !diagnostics_uri_points_to_existing_file(&uri),
++            "deleted file diagnostics must be filtered out"
++        );
++    }
++}
+diff --git a/src/mcp/definitions.rs b/src/mcp/definitions.rs
+index 7c2fb7e..11e9c92 100644
+--- a/src/mcp/definitions.rs
++++ b/src/mcp/definitions.rs
+@@ -93,7 +93,7 @@ pub async fn get_symbol_definition(
+ }
+ 
+ fn resolve_context_lines(context_lines: Option<u32>) -> u32 {
+-    context_lines.unwrap_or(1)
++    context_lines.unwrap_or(0)
+ }
+ 
+ #[cfg(test)]
+@@ -102,11 +102,11 @@ mod tests {
+     use rand::Rng;
+ 
+     #[test]
+-    fn it_defaults_context_lines_to_one_when_omitted() {
++    fn it_defaults_context_lines_to_zero_when_omitted() {
+         let resolved = resolve_context_lines(None);
+         assert_eq!(
+-            resolved, 1,
+-            "negative: context_lines must default to 1 when omitted"
++            resolved, 0,
++            "negative: documentSymbol should not fetch source snippets unless requested"
+         );
+     }
+ 
+diff --git a/src/service/operations/definitions.rs b/src/service/operations/definitions.rs
+index f5609be..b6b0298 100644
+--- a/src/service/operations/definitions.rs
++++ b/src/service/operations/definitions.rs
+@@ -664,21 +664,25 @@ pub(crate) async fn definitions_in_file_impl(
+         None => Vec::new(),
+     };
+ 
+-    // Enrich symbols with LSP hover data using parallel processing
+-    batch_enrich_symbols(
+-        manager,
+-        file_path,
+-        &mut symbols,
+-        DEFAULT_ENRICHMENT_CONCURRENCY,
+-    )
+-    .await;
+-
+     if !include_children {
+         symbols = strip_symbol_children(symbols);
+     }
+ 
+     let (mut symbols, pagination) = paginate_items(symbols, limit, offset);
+ 
++    // Keep documentSymbol cheap when callers ask for nested structure. Enriching every
++    // child with hover/dependency calls can turn a file outline into hundreds of LSP
++    // requests and hit MCP timeouts.
++    if !include_children {
++        batch_enrich_symbols(
++            manager,
++            file_path,
++            &mut symbols,
++            DEFAULT_ENRICHMENT_CONCURRENCY,
++        )
++        .await;
++    }
++
+     if context_lines > 0 {
+         attach_snippets_to_symbols(manager, file_path, &mut symbols, context_lines).await;
+     }
+diff --git a/src/utils/workspace_documents/range.rs b/src/utils/workspace_documents/range.rs
+index 627ebb4..d9bb307 100644
+--- a/src/utils/workspace_documents/range.rs
++++ b/src/utils/workspace_documents/range.rs
+@@ -5,6 +5,33 @@ use log::warn;
+ use lsp_types::Range;
+ use std::error::Error;
+ 
++fn char_to_byte_index(text: &str, char_index: usize) -> usize {
++    if char_index == 0 {
++        return 0;
++    }
++
++    text.char_indices()
++        .nth(char_index)
++        .map(|(byte_index, _)| byte_index)
++        .unwrap_or(text.len())
++}
++
++fn slice_by_char_range(text: &str, start_char: usize, end_char: usize) -> &str {
++    let start_byte = char_to_byte_index(text, start_char);
++    let end_byte = char_to_byte_index(text, end_char.max(start_char));
++    text.get(start_byte..end_byte).unwrap_or("")
++}
++
++fn slice_from_char(text: &str, start_char: usize) -> &str {
++    let start_byte = char_to_byte_index(text, start_char);
++    text.get(start_byte..).unwrap_or("")
++}
++
++fn slice_to_char(text: &str, end_char: usize) -> &str {
++    let end_byte = char_to_byte_index(text, end_char);
++    text.get(..end_byte).unwrap_or("")
++}
++
+ /// Extracts a range of text from document content
+ pub fn extract_range(content: &str, range: Range) -> Result<String, Box<dyn Error + Send + Sync>> {
+     let lines: Vec<&str> = content.split('\n').collect();
+@@ -48,17 +75,15 @@ pub fn extract_range(content: &str, range: Range) -> Result<String, Box<dyn Erro
+                 (0, true) => {
+                     let start_char = range.start.character.min(line_len as u32) as usize;
+                     let end_char = range.end.character.min(line_len as u32) as usize;
+-                    trimmed_line[..line_len]
+-                        .get(start_char..end_char)
+-                        .unwrap_or("")
++                    slice_by_char_range(trimmed_line, start_char, end_char)
+                 }
+                 (0, false) => {
+                     let start_char = range.start.character.min(line_len as u32) as usize;
+-                    trimmed_line[..line_len].get(start_char..).unwrap_or("")
++                    slice_from_char(trimmed_line, start_char)
+                 }
+                 (n, _) if n == end_line - start_line => {
+                     let end_char = range.end.character.min(line_len as u32) as usize;
+-                    trimmed_line[..line_len].get(..end_char).unwrap_or("")
++                    slice_to_char(trimmed_line, end_char)
+                 }
+                 _ => trimmed_line,
+             };
+@@ -167,4 +192,27 @@ mod tests {
+             result
+         );
+     }
++
++    #[test]
++    fn it_slices_multibyte_lines_by_lsp_character_offsets() {
++        let content = "英文中文mixed";
++
++        let range = Range {
++            start: Position {
++                line: 0,
++                character: 2,
++            },
++            end: Position {
++                line: 0,
++                character: 4,
++            },
++        };
++
++        let result = extract_range(content, range).unwrap();
++
++        assert_eq!(
++            result, "中文",
++            "negative: LSP character offsets must not be treated as byte offsets"
++        );
++    }
+ }

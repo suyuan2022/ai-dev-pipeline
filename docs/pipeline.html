@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>管好你的 AI Agent — 从对齐到交付的实战管线</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --canvas:#fff;--paper:#fbfaf7;--warm:#f7f5f0;--warm-deep:#efece5;
+  --green:#31CC79;--green-deep:#1faa5f;--green-fog:#ecf9f1;--green-soft:#c4f0d7;
+  --amber:#e8a55a;--amber-deep:#b37600;--amber-light:#fef6e8;
+  --teal:#2a9d99;--teal-light:#e8f6f5;
+  --rose:#d4380d;--rose-light:#fff1ec;
+  --violet:#722ed1;--violet-light:#f4efff;
+  --blue:#3370ff;--blue-light:#e8f0ff;
+  --ink:#262626;--ink-soft:#595959;--ink-muted:#8c8c8c;
+  --border:#ebe8e1;--border-soft:#f1eee7;
+  --ui:"Inter","Noto Sans SC","PingFang SC",sans-serif;
+  --serif:"Noto Serif SC","Songti SC",serif;
+  --shadow:0 4px 16px rgba(58,42,18,.05);
+  --shadow-h:0 12px 32px rgba(58,42,18,.09);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{font-family:var(--ui);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;font-size:16px;line-height:1.75}
+.s{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:48px 72px;position:relative}
+.si{max-width:1080px;margin:0 auto;width:100%}
+.sn{position:absolute;bottom:20px;right:36px;font-size:11px;color:var(--ink-muted);font-family:var(--serif)}
+.breath{text-align:center;display:flex;align-items:center;justify-content:center}
+.bt{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.5;color:var(--ink);max-width:680px}
+.bs{font-size:15px;color:var(--ink-muted);margin-top:10px}
+h1{font-family:var(--serif);font-size:46px;font-weight:700;line-height:1.2;color:var(--ink)}
+h2{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.3;color:var(--ink);margin-bottom:6px}
+h3{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink)}
+h4{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.sub{font-size:16px;color:var(--ink-soft);line-height:1.8;margin-top:10px;max-width:680px}
+.sm{font-size:14px;color:var(--ink-soft);line-height:1.65}
+.xs{font-size:12px;color:var(--ink-muted);line-height:1.5}
+.divider{width:44px;height:3px;background:var(--green);border-radius:2px;margin:12px 0}
+.pill{display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:600}
+.card{background:var(--canvas);border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow-h)}
+.quote{border-left:3px solid var(--green);padding:12px 18px;background:var(--green-fog);border-radius:0 8px 8px 0;font-size:14px;color:var(--ink);line-height:1.7}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tag-h{background:var(--green-fog);color:var(--green-deep);border:1px solid var(--green-soft);padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.chat{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:14px}
+.chat-hdr{background:var(--warm);padding:8px 14px;font-size:11px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.chat-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--canvas);max-height:260px;overflow-y:auto}
+.chat-msg{display:flex;gap:8px;align-items:flex-start}
+.chat-role{font-size:10px;font-weight:700;min-width:24px;padding-top:2px;flex-shrink:0}
+.chat-role.u{color:var(--blue)}
+.chat-role.a{color:var(--green-deep)}
+.chat-text{font-size:13px;color:var(--ink-soft);line-height:1.55;padding:6px 10px;border-radius:8px;flex:1}
+.chat-msg.user .chat-text{background:var(--blue-light)}
+.chat-msg.ai .chat-text{background:var(--green-fog)}
+.excerpt{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:14px}
+.excerpt-hdr{background:var(--warm);padding:8px 14px;font-size:11px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.excerpt-body{padding:12px 16px;font-size:13px;color:var(--ink-soft);line-height:1.7;background:var(--canvas)}
+.lm-row{display:flex;align-items:center;width:100%;gap:10px;margin:3px 0}
+.lm-label{width:80px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;flex-shrink:0;line-height:1.2}
+.lm-content{flex:1;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.lm-node{padding:4px 11px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid;white-space:nowrap}
+.lm-node.human{box-shadow:0 0 0 2px var(--green-soft)}
+.lm-v{width:100%;display:flex;justify-content:center;padding:0}
+.lm-v .vl{width:1.5px;height:12px;background:var(--border)}
+.lm-split{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;padding:0 90px}
+.lm-split-col{display:flex;flex-direction:column;align-items:center;gap:0}
+.lm-split-hdr{font-size:10px;font-weight:700;padding:3px 12px;border-radius:999px;margin-bottom:2px}
+.lm-kb{display:flex;gap:10px;justify-content:center;padding:8px 16px;background:var(--amber-light);border-radius:8px;border:1px dashed var(--amber);width:100%;margin-top:2px}
+.lm-kb span{font-size:10px;font-weight:600;color:var(--amber-deep)}
+.smap{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+.smap-row{display:flex;align-items:center;gap:12px}
+.smap-pillar{width:100px;text-align:center;padding:10px;border-radius:10px;flex-shrink:0}
+.smap-pillar-num{font-family:var(--serif);font-size:28px;font-weight:700}
+.smap-pillar-label{font-size:12px;font-weight:600;margin-top:2px}
+.smap-arrow{color:var(--ink-muted);font-size:14px;flex-shrink:0}
+.smap-tools{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.smap-tool{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1.5px solid}
+.tt{width:100%;border-collapse:collapse}
+.tt th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border)}
+.tt td{padding:8px 10px;font-size:13px;border-bottom:1px solid var(--border-soft)}
+.tt tr:hover{background:var(--warm)}
+.tt .tn{font-weight:600;color:var(--green-deep);font-family:monospace;font-size:12px}
+.pn{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:4px}
+.pd{width:6px;height:6px;border-radius:50%;background:var(--warm-deep);border:none;cursor:pointer;transition:all .2s;padding:0}
+.pd.on{background:var(--green);width:8px;height:8px}
+.step-flow{display:flex;gap:0;margin-top:16px;flex-wrap:wrap}
+.step-item{padding:10px 16px;border:1px solid var(--border);border-right:none;background:var(--canvas);text-align:center;flex:1;min-width:100px}
+.step-item:first-child{border-radius:10px 0 0 10px}
+.step-item:last-child{border-radius:0 10px 10px 0;border-right:1px solid var(--border)}
+.step-item.active{background:var(--green-fog);border-color:var(--green-soft)}
+.step-item .step-n{font-size:10px;font-weight:700;color:var(--ink-muted)}
+.step-item .step-t{font-size:13px;font-weight:600;color:var(--ink);margin-top:2px}
+.step-item .step-s{font-size:10px;color:var(--ink-muted);margin-top:1px}
+.rule-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.rule-item{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--canvas);border:1px solid var(--border);border-radius:10px}
+.rule-num{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--violet);min-width:24px;flex-shrink:0}
+.rule-body h4{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.rule-body p{font-size:12px;color:var(--ink-soft);line-height:1.5}
+.vs-box{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px}
+.vs-card{padding:20px 24px;border-radius:14px}
+</style>
+</head>
+<body>
+<nav class="pn" id="pn"></nav>
+
+<!-- ============================================================ -->
+<!-- ACT 1: 问题与洞察 (Slides 1-5)                                -->
+<!-- ============================================================ -->
+
+<!-- 1 封面 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <div class="pill" style="background:var(--green-fog);color:var(--green-deep)">AI Coding 实战分享 · 2026</div>
+  <h1 style="margin-top:14px">管好你的 AI Agent</h1>
+  <div class="divider"></div>
+  <p class="sub">不是教你写代码，是教你怎么<strong>管理 Agent</strong>。<br>管好上下文、给对方法论，让 Agent 替你干活。</p>
+  <p style="margin-top:24px;font-size:14px;color:var(--ink-muted)">从对齐到交付的实战管线 · 夙愿</p>
+</div><div class="sn">1 / 28</div>
+</section>
+
+<!-- 2 hook -->
+<section class="s breath" style="background:var(--canvas)">
+<div>
+  <div class="bt">你有没有这种体验？<br><br>让 AI 帮你干活，前 10 分钟效率起飞，<br>半小时后开始说废话、重复自己、<br>忘了前面聊过什么。</div>
+  <div class="bs">改了三次还是不对，最后自己上手改，反而更快。</div>
+</div><div class="sn">2 / 28</div>
+</section>
+
+<!-- 3 聪明区 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>因为 AI 有一个"聪明区"</h2>
+  <div class="divider"></div>
+  <p class="sub">不是它不行。是它的注意力窗口（上下文）有上限。超过这个上限，能力断崖下降。</p>
+  <div class="g2" style="margin-top:24px">
+    <div style="padding:28px;background:var(--green-fog);border-radius:14px;border:2px solid var(--green-soft);text-align:center">
+      <div style="font-family:var(--serif);font-size:48px;font-weight:700;color:var(--green)">~10 万</div>
+      <div style="font-size:14px;color:var(--green-deep);margin-top:4px;font-weight:600">token 以内 = 聪明</div>
+      <p class="sm" style="margin-top:8px">思路清晰、记得上下文、主动追问细节、产出质量高</p>
+    </div>
+    <div style="padding:28px;background:var(--rose-light);border-radius:14px;border:2px solid rgba(212,56,13,.15);text-align:center">
+      <div style="font-family:var(--serif);font-size:48px;font-weight:700;color:var(--rose)">10 万+</div>
+      <div style="font-size:14px;color:var(--rose);margin-top:4px;font-weight:600">超出 = 开始变蠢</div>
+      <p class="sm" style="margin-top:8px">忘了前面说过的话、重复犯错、漏掉关键信息、产出质量断崖下降</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:20px">
+    <strong>核心直觉：</strong>你做的一切——选工具、写文档、拆任务——本质上都是为了让 Agent 待在聪明区里干活。
+  </div>
+</div><div class="sn">3 / 28</div>
+</section>
+
+<!-- 3 三种变蠢 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>Agent 变蠢的三种方式</h2>
+  <div class="divider"></div>
+  <div class="g3" style="margin-top:20px">
+    <div style="padding:24px;background:var(--rose-light);border-radius:14px"><div style="font-family:var(--serif);font-size:32px;font-weight:700;color:var(--rose);line-height:1">01</div><h3 style="margin-top:10px;color:var(--rose)">信息没对齐</h3><p class="sm" style="margin-top:8px">你脑子里有很多细节，但 Agent 不知道。<br>它只能猜你的意图，猜错就做错，做错就返工，返工就浪费上下文。</p></div>
+    <div style="padding:24px;background:var(--amber-light);border-radius:14px"><div style="font-family:var(--serif);font-size:32px;font-weight:700;color:var(--amber-deep);line-height:1">02</div><h3 style="margin-top:10px;color:var(--amber-deep)">工具不到位</h3><p class="sm" style="margin-top:8px">没有精准定位工具，Agent 就把整个代码库读一遍来找一个函数。<br>上下文瞬间爆炸，聪明区用完了。</p></div>
+    <div style="padding:24px;background:var(--violet-light);border-radius:14px"><div style="font-family:var(--serif);font-size:32px;font-weight:700;color:var(--violet);line-height:1">03</div><h3 style="margin-top:10px;color:var(--violet)">没有方法论</h3><p class="sm" style="margin-top:8px">AI 的训练让它倾向于"快点完成"。没有 SOP 约束，它会自由发挥，产出大量看似正确但经不起推敲的代码（AI slop）。</p></div>
+  </div>
+  <p class="sm" style="margin-top:24px;text-align:center">三种方式，一个结果：Agent 被迫离开聪明区，产出质量断崖下降。</p>
+</div><div class="sn">4 / 28</div>
+</section>
+
+<!-- 4 呼吸 -->
+<section class="s breath" style="background:var(--warm)">
+<div><div class="bt">所以，核心不是学写代码，<br>而是学<span style="color:var(--green-deep)">怎么让 Agent 保持聪明</span>。</div><div class="bs">三件事。</div></div><div class="sn">5 / 28</div>
+</section>
+
+<!-- 5 三件事总览 -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>三件事，让 Agent 一直聪明</h2>
+  <div class="divider"></div>
+  <div class="g3" style="margin-top:16px">
+    <div class="card" style="border-top:3px solid var(--green)"><div style="font-family:var(--serif);font-size:32px;font-weight:700;color:var(--green)">壹</div><h3 style="margin-top:4px">对齐信息</h3><p class="sm" style="margin-top:6px">说出你的需求，聪明的 Agent 会主动追问，帮你把脑子里的想法挖出来，辅助你做出更好的决策。</p></div>
+    <div class="card" style="border-top:3px solid var(--amber)"><div style="font-family:var(--serif);font-size:32px;font-weight:700;color:var(--amber)">贰</div><h3 style="margin-top:4px">管好上下文</h3><p class="sm" style="margin-top:6px">精准工具、知识沉淀、会话接力。让 Agent 用最少的上下文做最准确的事，始终待在聪明区。</p></div>
+    <div class="card" style="border-top:3px solid var(--violet)"><div style="font-family:var(--serif);font-size:32px;font-weight:700;color:var(--violet)">叁</div><h3 style="margin-top:4px">给对方法论</h3><p class="sm" style="margin-top:6px">Skill 就是给 Agent 的标准作业流程。按套路干活，不自由发挥，从源头消灭 AI slop。</p></div>
+  </div>
+</div><div class="sn">6 / 28</div>
+</section>
+
+<!-- 7 最小必要干预 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>最小必要干预</h2>
+  <div class="divider"></div>
+  <p class="sub">模型本身是有能力的。你要给它发挥空间，如果全部定死了反而不行。<br>关键是：<strong>最少的干预，最大的效果</strong>。</p>
+  <div class="g2" style="margin-top:20px">
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h3 style="color:var(--green-deep)">经验预置</h3>
+      <p class="sm" style="margin-top:8px">AI 第一次用工具，可能要试十几遍才摸对路。这种经验可以提前帮它备好，让它下次一步到位。</p>
+      <div style="margin-top:12px;padding:10px 14px;background:var(--warm);border-radius:8px">
+        <p class="xs"><strong>例子：</strong>TDD 的红绿重构循环、代码审查的 8 条铁律、LSP 的精准定位 — 都是把"老手的经验"预置给 Agent，引导它往正确方向走，从源头反制 AI slop。</p>
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--violet)">
+      <h3 style="color:var(--violet)">循环机制</h3>
+      <p class="sm" style="margin-top:8px">AI 聊着聊着就会"漂移"— 忘了自己原本的任务是什么。加一个循环（loop），拉回来，但不限制它怎么想。</p>
+      <div style="margin-top:12px;padding:10px 14px;background:var(--warm);border-radius:8px">
+        <p class="xs"><strong>例子：</strong>/grill 里有一个循环 — "沿着决策树每个分支走下去，逐一解决，直到所有分支穷尽"。这保证 Agent 不会聊到一半就收场，又不限制它怎么提问。</p>
+      </div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:18px">
+    既给 Agent 发挥空间，又确保它不脱离目标。<strong>管好 Agent ≠ 管死 Agent</strong>。
+  </div>
+</div><div class="sn">7 / 28</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 2: 壹 · 对齐信息 (Slides 8-10)                            -->
+<!-- ============================================================ -->
+
+<!-- 8 呼吸 -->
+<section class="s breath" style="background:var(--green-fog)">
+<div><div style="font-family:var(--serif);font-size:56px;font-weight:700;color:var(--green)">壹</div><div class="bt" style="margin-top:6px">对齐信息</div><div class="bs">说出你的需求，聪明的 Agent 会帮你想清楚</div></div><div class="sn">8 / 28</div>
+</section>
+
+<!-- 7 /grill -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>/grill — 拷问你的想法 <span class="tag-h">你参与</span></h2>
+  <div class="divider"></div>
+  <div class="g2">
+    <div>
+      <p class="sub" style="margin-top:0">AI 扮演严格的产品经理，不厌其烦地追问。把你脑子里知道但 Agent 不知道的东西<strong>全部说出来</strong>。</p>
+      <div class="excerpt"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body">不厌其烦地拷问我关于这个方案的每一个方面，直到我们达成共识。沿着设计树的每一个分支走下去，逐一解决决策之间的依赖关系。每个问题给出你推荐的答案。<br><br><strong>一次只问一个问题</strong>，等我回答之后再问下一个。<br><br>如果一个问题可以通过探索代码库来回答，那就<strong>自己去查代码</strong>，不要问我。<br><br><span style="color:var(--ink-muted)">当用户使用的术语跟 CONTEXT.md 里的定义冲突时，立刻指出。当用户用模糊的词，提出精确的规范用语。用具体场景来压力测试设计。</span></div></div>
+    </div>
+    <div>
+      <div class="chat"><div class="chat-hdr">实际使用时的对话示例</div><div class="chat-body">
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">我想做一个邀请码功能，让老用户邀请新用户注册</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">邀请码的有效期是多长？永久有效还是有过期时间？</div></div>
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">7 天过期吧</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">好的。邀请码用完一次就失效，还是可以多次使用？</div></div>
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">一次性的</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">你的系统里有免费用户和付费用户两种身份 — 邀请码是两种用户都能发，还是只有付费用户？</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">另外我查了代码，user_invite 表已经有 expires_at 字段。我建议复用这张表而不是新建。</div></div>
+      </div></div>
+      <p class="xs" style="margin-top:10px"><strong>为什么不用 Plan？</strong> Plan 催模型赶紧出执行计划。Grill 是逼你把决策点想清楚，目标不同。</p>
+    </div>
+  </div>
+</div><div class="sn">9 / 28</div>
+</section>
+
+<!-- 8 prototype + to-prd -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>然后：验证可行性 + 写需求文档</h2>
+  <div class="divider"></div>
+  <div class="g2" style="margin-top:12px">
+    <div>
+      <div style="padding:20px 24px;background:var(--amber-light);border-radius:12px;margin-bottom:16px"><div class="xs" style="font-weight:700;color:var(--amber-deep);text-transform:uppercase;letter-spacing:.5px">可选 · /prototype</div><h3 style="margin-top:6px">先做个原型试试</h3>
+        <div class="excerpt"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body">原型是<strong>用完即丢的代码，用来回答一个问题</strong>。问题决定形态：<br><br>"这个逻辑/状态模型对不对？" → 做一个可交互的终端小程序，推演状态机。<br>"界面该长什么样？" → 生成几种截然不同的 UI 方案，放在同一个页面上切换对比。</div></div>
+      </div>
+      <div class="chat"><div class="chat-hdr">/prototype 对话示例</div><div class="chat-body">
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">我不确定邀请码流程的交互长什么样</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">我给你生成三种 UI 方案：A 弹窗式、B 页面式、C 链接分享式。你在浏览器里切换对比。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">[生成 HTML 原型文件，浏览器打开即可交互]</div></div>
+      </div></div>
+    </div>
+    <div>
+      <div style="padding:20px 24px;background:var(--violet-light);border-radius:12px;margin-bottom:16px"><div class="xs" style="font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:.5px">必要 · /to-prd <span class="tag-h">你确认</span></div><h3 style="margin-top:6px">把想法变成需求文档</h3>
+        <div class="excerpt"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body">把当前对话的上下文和代码库理解合成为 PRD（需求文档）。<strong>不要再次拷问用户</strong> — 直接综合已有信息。只做确认性追问。<br><br>PRD 质量规则：下一个 Agent 永远无法访问本次对话。<strong>必须列出每一个决策、约束、边界条件、被否决的替代方案</strong> — 不允许省略。缺一项就是缺陷。</div></div>
+      </div>
+      <p class="sm">PRD 写入 Issue（一种任务工单） → 全新 AI 会话直接读取 → 带着完整上下文开干。</p>
+      <div class="quote" style="margin-top:12px;font-size:13px">
+        <strong>为什么要这么严格？</strong>下一个 Agent 看不到你和 /grill 的对话。PRD 是唯一的信息传递渠道。漏一个决策，Agent 就会自己猜——猜错就是返工。
+      </div>
+    </div>
+  </div>
+</div><div class="sn">10 / 28</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 3: 贰 · 管好上下文 (Slides 9-12)                          -->
+<!-- ============================================================ -->
+
+<!-- 9 呼吸 -->
+<section class="s breath" style="background:var(--amber-light)">
+<div><div style="font-family:var(--serif);font-size:56px;font-weight:700;color:var(--amber)">贰</div><div class="bt" style="margin-top:6px">管好上下文</div><div class="bs">让 Agent 待在聪明区里</div></div><div class="sn">11 / 28</div>
+</section>
+
+<!-- 10 LSP -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>LSP — 精准定位，省下大量上下文</h2>
+  <div class="divider"></div>
+  <p class="sub">LSP（语言服务协议）是代码编辑器的标配能力。配好后 Agent 可以精准定位代码，而不是把整个项目读一遍。</p>
+  <div class="g2" style="margin-top:18px">
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h3>类比：代码字典</h3>
+      <p class="sm" style="margin-top:8px">"这个函数在哪定义？" → 一步跳转。<br>"谁在调用它？" → 列出所有引用。<br><br>没有 LSP，Agent 靠全局搜索猜测，经常猜错还浪费大量上下文。有了它，<strong>定位精准、上下文占用极少</strong>。</p>
+      <div style="margin-top:12px;padding:10px 14px;background:var(--warm);border-radius:8px">
+        <p class="xs"><strong>设置方式：</strong>通过 /lsp-setup Skill 一键配置，支持 TypeScript、Python、Go 等主流语言。</p>
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--teal)">
+      <h3>对比：有 vs 没有</h3>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+        <div style="padding:10px 14px;background:var(--rose-light);border-radius:8px">
+          <p class="xs" style="font-weight:700;color:var(--rose)">没有 LSP</p>
+          <p class="xs" style="margin-top:4px">"改 handlePayment 函数" → Agent 搜索 15 个文件、读 3000 行代码来找这个函数 → 上下文消耗大量 token</p>
+        </div>
+        <div style="padding:10px 14px;background:var(--green-fog);border-radius:8px">
+          <p class="xs" style="font-weight:700;color:var(--green-deep)">有 LSP</p>
+          <p class="xs" style="margin-top:4px">"改 handlePayment 函数" → 跳转到定义（1 行命令）→ 查引用（列出 4 个调用方）→ 精准修改 → 上下文几乎没浪费</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><div class="sn">12 / 28</div>
+</section>
+
+<!-- 11 聪明区管理 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>让 Agent 待在聪明区</h2>
+  <p class="sub">三个手段，控制上下文消耗。</p>
+  <div class="g3" style="margin-top:18px">
+    <div class="card"><h4 style="color:var(--teal)">精准定位</h4><p class="sm" style="margin-top:6px">有了 LSP，Agent 不需要把代码库读一遍。一步跳转到定义，查引用列出所有调用方，精准修改。省下的上下文留给真正重要的思考。</p></div>
+    <div class="card"><h4 style="color:var(--teal)">Skill 聚焦</h4><p class="sm" style="margin-top:6px">每个 Skill 只给 Agent 必要的上下文。/grill 只管需求对齐，/tdd 只管写代码，/bugfix 只管修 Bug。不让无关信息占位置。</p></div>
+    <div class="card"><h4 style="color:var(--teal)">会话接力 /handoff</h4><p class="sm" style="margin-top:6px">上下文快满了 → 压缩为交接文档 → 新会话从断点继续。Bug 调试带 Debug Chain（调试链），不走弯路。</p></div>
+  </div>
+  <div class="excerpt" style="margin-top:18px"><div class="excerpt-hdr">/handoff Skill 核心指令（中文翻译）</div><div class="excerpt-body">写一份交接文档，让全新的会话能接续工作。自动获取当前会话 ID，压缩对话为交接文档，引用已有产物而不是复制。Bug 场景包含 Debug Chain：当前阶段 + 反馈环 + 已排除的假设 + 关键发现。</div></div>
+</div><div class="sn">13 / 28</div>
+</section>
+
+<!-- 12 知识沉淀 -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>知识沉淀 — Agent 越用越懂你的项目</h2>
+  <div class="divider"></div>
+  <div class="g3" style="margin-top:14px">
+    <div class="card" style="border-top:3px solid var(--green)"><div class="xs" style="font-weight:700;color:var(--green-deep);text-transform:uppercase;letter-spacing:.5px">CONTEXT.md</div><h3 style="margin-top:6px">业务术语表</h3><p class="sm" style="margin-top:6px">"用户每日可调用 100 次 API" — 写进去后 Agent 再也不会问，更不会自己改成 50。</p></div>
+    <div class="card" style="border-top:3px solid var(--violet)"><div class="xs" style="font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:.5px">docs/adr/</div><h3 style="margin-top:6px">技术决策记录</h3><p class="sm" style="margin-top:6px">"为什么选 SQLite 而不是 PostgreSQL？" — Agent 不知道历史，可能做相反决策。ADR 记录选择和原因。</p></div>
+    <div class="card" style="border-top:3px solid var(--amber)"><div class="xs" style="font-weight:700;color:var(--amber-deep);text-transform:uppercase;letter-spacing:.5px">docs/specs/</div><h3 style="margin-top:6px">已知陷阱</h3><p class="sm" style="margin-top:6px">"金额计算不能用浮点数" — 修这块代码前自动读取，不再踩坑。</p></div>
+  </div>
+  <div class="quote" style="margin-top:16px">
+    知识三件套越积累越厚。Agent 每次新会话先读 → 不重复问已确认的事 → 不重复犯已踩过的坑 → 产出质量越来越高。<strong>这就是"让 Agent 越来越聪明"的长期手段。</strong>
+  </div>
+</div><div class="sn">14 / 28</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 4: 叁 · 给对方法论 (Slides 13-20)                          -->
+<!-- ============================================================ -->
+
+<!-- 13 呼吸 -->
+<section class="s breath" style="background:var(--violet-light)">
+<div><div style="font-family:var(--serif);font-size:56px;font-weight:700;color:var(--violet)">叁</div><div class="bt" style="margin-top:6px">给对方法论</div><div class="bs">给 Agent SOP，不让它自由发挥</div></div><div class="sn">15 / 28</div>
+</section>
+
+<!-- 14 TDD -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>/tdd — 先写测试再写代码</h2>
+  <div class="divider"></div>
+  <div class="g2">
+    <div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:24px;height:24px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;flex-shrink:0;font-weight:700">红</div><span class="sm">先写一个测试（会失败，因为代码没写）</span></div>
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;color:white;flex-shrink:0;font-weight:700">绿</div><span class="sm">写最少的代码让测试通过</span></div>
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:24px;height:24px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;color:white;flex-shrink:0;font-weight:700">重</div><span class="sm">优化代码结构，测试仍然通过</span></div>
+      </div>
+      <div class="excerpt" style="margin-top:14px"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body"><strong>核心原则：</strong>测试应该通过公共接口验证行为，而不是验证实现细节。代码可以完全重写，测试不该受影响。<br><br><strong>好的测试</strong>是集成式的：通过公共 API 走真实代码路径。描述的是系统"做什么"而不是"怎么做"。<br><br><strong>规则：</strong>一次一个测试，只写刚好够通过的代码。<strong>红灯时绝不重构。</strong>先变绿再优化。</div></div>
+    </div>
+    <div>
+      <div class="chat"><div class="chat-hdr">/tdd 执行流程示例</div><div class="chat-body">
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">读取需求文档，确认需要实现 3 个行为：创建邀请码、验证邀请码、过期处理。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">切片 1/3 — 红：写测试 "创建邀请码返回 8 位字符串，状态为 active"</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">测试失败（预期）。绿：实现 createInviteCode()，测试通过。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">切片 2/3 — 红：写测试 "使用已用过的邀请码应返回错误"</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">绿：实现验证逻辑。重构：提取 validateInviteCode()。全部测试仍通过。</div></div>
+      </div></div>
+      <p class="sm" style="margin-top:12px"><strong>为什么有用？</strong> Agent 不能自己判断做对没有。测试是客观裁判——过了就是过了，没过就是没过。方法论逼它用闭环方式完成任务。</p>
+    </div>
+  </div>
+</div><div class="sn">16 / 28</div>
+</section>
+
+<!-- 15 thermo-nuclear 核心理念 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>代码审查 — Thermo-Nuclear Review</h2>
+  <div class="divider"></div>
+  <p class="sub">来自 Cursor 团队的代码审查方法论。核心理念：<strong>Code Judo（代码柔术）</strong> — 用更好的结构让代码消失，而不是整理代码。</p>
+  <div class="quote" style="margin-top:16px">
+    不要满足于"代码能跑"。要追问：有没有一种重构方式，能让整段分支、整个 helper、整层抽象<strong>直接消失</strong>？
+  </div>
+  <div class="rule-list" style="margin-top:16px">
+    <div class="rule-item"><div class="rule-num">0</div><div class="rule-body"><h4>大胆追求结构简化</h4><p>不要停在"这里可以更干净一点"。找到让整个分支、helper、模式、条件判断直接消失的方案。好的代码，回头看是理所当然的。</p></div></div>
+    <div class="rule-item"><div class="rule-num">1</div><div class="rule-body"><h4>文件不准超过 1000 行</h4><p>一个 PR 把文件从 1k 行以下推到 1k 行以上？默认不通过。先拆分再提交。</p></div></div>
+    <div class="rule-item"><div class="rule-num">2</div><div class="rule-body"><h4>不准到处加 if</h4><p>新增的散乱条件判断、临时特判、随机分支 → 设计问题，不是风格问题。逻辑应该在自己的抽象后面。</p></div></div>
+    <div class="rule-item"><div class="rule-num">3</div><div class="rule-body"><h4>能跑 ≠ 能合</h4><p>行为正确但结构变差的代码，不通过。保留行为，重构实现。</p></div></div>
+    <div class="rule-item"><div class="rule-num">4</div><div class="rule-body"><h4>直接、无聊、可维护</h4><p>拒绝"魔法"代码。拒绝为了通用性而加的薄抽象层。如果一个 wrapper 不能让代码更清晰，删掉它。</p></div></div>
+    <div class="rule-item"><div class="rule-num">5</div><div class="rule-body"><h4>类型和边界要干净</h4><p>不要用 any / unknown / 强制类型转换来掩盖不清晰的数据边界。把边界本身搞清楚。</p></div></div>
+    <div class="rule-item"><div class="rule-num">6</div><div class="rule-body"><h4>逻辑放对地方，复用已有工具</h4><p>功能逻辑泄漏到公共路径？用一个 bespoke helper 而不是已有的工具？推回去。</p></div></div>
+    <div class="rule-item"><div class="rule-num">7</div><div class="rule-body"><h4>不要无谓串行，不要半吊子更新</h4><p>独立的工作串行执行？相关的更新分两步提交可能只做一半？都是设计味道。</p></div></div>
+  </div>
+</div><div class="sn">17 / 28</div>
+</section>
+
+<!-- 16 thermo-nuclear review 问题 + Codex -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>Review 时问什么？ + 自动化审查</h2>
+  <div class="divider"></div>
+  <div class="g2" style="margin-top:12px">
+    <div>
+      <h3 style="color:var(--violet)">Thermo-Nuclear 审查问题</h3>
+      <p class="xs" style="margin-top:4px">每个有意义的改动，都要过一遍这些问题：</p>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="padding:8px 12px;background:var(--violet-light);border-radius:8px;font-size:13px;color:var(--ink-soft);line-height:1.5"><strong style="color:var(--violet)">1.</strong> 有没有 Code Judo 的机会？能不能用更好的结构让这段代码直接消失？</div>
+        <div style="padding:8px 12px;background:var(--violet-light);border-radius:8px;font-size:13px;color:var(--ink-soft);line-height:1.5"><strong style="color:var(--violet)">2.</strong> 能不能重新定义问题，让需要的概念、分支、helper 层更少？</div>
+        <div style="padding:8px 12px;background:var(--violet-light);border-radius:8px;font-size:13px;color:var(--ink-soft);line-height:1.5"><strong style="color:var(--violet)">3.</strong> 这个改动让局部架构变好了还是变差了？</div>
+        <div style="padding:8px 12px;background:var(--violet-light);border-radius:8px;font-size:13px;color:var(--ink-soft);line-height:1.5"><strong style="color:var(--violet)">4.</strong> 这个抽象真的值得存在吗？还是只是一个 wrapper？</div>
+        <div style="padding:8px 12px;background:var(--violet-light);border-radius:8px;font-size:13px;color:var(--ink-soft);line-height:1.5"><strong style="color:var(--violet)">5.</strong> 逻辑放对层了吗？有没有把实现细节泄漏到不该去的地方？</div>
+        <div style="padding:8px 12px;background:var(--violet-light);border-radius:8px;font-size:13px;color:var(--ink-soft);line-height:1.5"><strong style="color:var(--violet)">6.</strong> 有没有重复的条件判断，暗示缺了一个模型或 helper？</div>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--blue)">Codex Auto-Review</h3>
+      <p class="sm" style="margin-top:8px">PR（代码合并请求）提交后，CI（持续集成）自动触发 Codex Review。不需要手动操作，等 1-2 分钟查看评论。</p>
+      <div class="chat" style="margin-top:10px"><div class="chat-hdr">自动流程</div><div class="chat-body">
+        <div class="chat-msg ai"><div class="chat-role a">CI</div><div class="chat-text">检测到 PR #58 → 自动触发 Codex Review</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">Codex</div><div class="chat-text">Review 完成。发现 2 个问题：1) invite_code 长度硬编码 2) 缺少 null check...</div></div>
+      </div></div>
+      <div class="quote" style="margin-top:16px;font-size:13px">
+        <strong>两层审查 = 双保险</strong><br>
+        Thermo-Nuclear 管代码质量和结构健康。<br>
+        Codex Review 管逻辑漏洞和实现错误。<br>
+        一个看骨架，一个看细节。
+      </div>
+    </div>
+  </div>
+</div><div class="sn">18 / 28</div>
+</section>
+
+<!-- 17 e2e-verify -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>/e2e-verify — 按验收标准逐条检查</h2>
+  <div class="divider"></div>
+  <div class="g2" style="margin-top:12px">
+    <div>
+      <div class="excerpt"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body">验证需求文档的验收标准 vs 运行中的代码。<strong>只报事实，绝不建议修复。</strong><br><br>验证手段优先级（由快到慢）：<br>1. 数据库查询 — 数据状态验证，置信度最高<br>2. 命令行 / API 调用 — 行为验证<br>3. 浏览器自动操作 — 界面渲染和数据显示验证<br><br>每条结果：<strong>PASS / FAIL / SKIP / BLOCKED</strong>。FAIL 一律交 /bugfix。</div></div>
+      <p class="sm" style="margin-top:12px">全 PASS → 提交 PR<br>FAIL → /bugfix 修复 → 重跑验证（最多 3 轮）<br>3 轮都 FAIL → 停下来报告人</p>
+    </div>
+    <div>
+      <div class="chat"><div class="chat-hdr">/e2e-verify 执行示例</div><div class="chat-body">
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">/e2e-verify #42</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">读取 Issue #42 验收标准，共 5 条。Round 0/3。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">AC-1 创建邀请码 → 查数据库 → PASS</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">AC-2 过期码拒绝 → 调用 API → 返回 400 → PASS</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">AC-4 页面显示 → 浏览器打开邀请页 → 码列表正常渲染 → PASS</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">AC-3 使用后状态 → 查数据库 → status 仍为 active，预期 used → FAIL</div></div>
+      </div></div>
+    </div>
+  </div>
+</div><div class="sn">19 / 28</div>
+</section>
+
+<!-- 18 呼吸 -->
+<section class="s breath" style="background:var(--warm)">
+<div><div class="bt">自动验证通过了。<br>但上线前，<span style="color:var(--green-deep)">你还得亲手测一遍</span>。</div></div><div class="sn">20 / 28</div>
+</section>
+
+<!-- 19 functional-test -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>/functional-test — 分组手工测试 <span class="tag-h">你参与</span></h2>
+  <div class="divider"></div>
+  <div class="g2">
+    <div>
+      <h3>分组测试，不要逐个测</h3>
+      <p class="sm" style="margin-top:8px;color:var(--rose)"><strong>以前：</strong>注册 → 打勾 → 切账号 → 登录 → 打勾 → 切账号... 很慢。</p>
+      <p class="sm" style="margin-top:8px;color:var(--green-deep)"><strong>现在：</strong>用一个账号走完整条路线。一组测完再换下一组。</p>
+      <div class="excerpt" style="margin-top:12px"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body">把散乱的测试点整理成<strong>"最短路径测试分组"</strong>，然后陪用户跑测试。<br><br>只记事实。<strong>不分析原因，不建议修复</strong>。发现 Bug → 交给 /bugfix。</div></div>
+    </div>
+    <div>
+      <div class="chat"><div class="chat-hdr">/functional-test 对话示例</div><div class="chat-body">
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">邀请码功能拆为 2 组：<br>组 1：完整邀请流程<br>组 2：异常路径</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">开始组 1。请登录后，点击生成邀请码。</div></div>
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">生成了，码是 AB3K7F2X</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">查数据库... 新增一行，code=AB3K7F2X, status=active。正确。请用新设备注册。</div></div>
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">注册成功了，但邀请人那边没显示"已被使用"</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">记录 Bug：邀请码使用后邀请人页面状态未更新。数据库里 status 已变 used，前端未刷新。待 /bugfix。</div></div>
+      </div></div>
+    </div>
+  </div>
+</div><div class="sn">21 / 28</div>
+</section>
+
+<!-- 20 bugfix -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>/bugfix — 7 阶段诊断循环</h2>
+  <div class="divider"></div>
+  <div class="g2">
+    <div>
+      <p class="sub" style="margin-top:0">不是随便改改就交差。<strong>像医生问诊一样</strong>，系统地排查根因再动手。</p>
+      <div class="excerpt"><div class="excerpt-hdr">Skill 核心指令（中文翻译）</div><div class="excerpt-body">所有 Bug 从这里开始。不允许跳过阶段。<br><br><strong>Phase 0 读知识</strong> — 先读已有文档，看有没有已知陷阱<br><strong>Phase 1 建反馈环</strong> — 建立能快速验证修复的方式（整个方法论的灵魂）<br><strong>Phase 2 复现</strong> — 确认是那个 Bug，确认可复现<br><strong>Phase 3 假设</strong> — 列 3-5 个排序假设，追问"为什么发生"而非"发生了什么"<br><strong>Phase 4 探针</strong> — 每个探针对应一个假设，一次一个变量<br><strong>Phase 5 修复</strong> — 先写回归测试再修<br><strong>Phase 6 知识沉淀</strong> — 学到了什么？有什么坑？架构要改吗？</div></div>
+    </div>
+    <div>
+      <div class="chat"><div class="chat-hdr">/bugfix 对话示例</div><div class="chat-body">
+        <div class="chat-msg user"><div class="chat-role u">你</div><div class="chat-text">邀请码使用后前端状态没更新</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">进入 Phase 0。读文档... 未发现已知陷阱。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">Phase 1：建反馈环 — 我会用浏览器打开邀请人页面，刷新后观察 status 字段。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">Phase 2：复现成功。使用邀请码后，数据库 status=used，但前端仍显示 active。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">Phase 3：假设 1) API 返回了旧数据（缓存）2) 前端没有重新请求 3) 推送缺失</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">Phase 4：探针 — 查 API 响应... 返回 status=used，排除假设 1。检查前端代码... 发现页面刷新逻辑的依赖项缺失。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">Phase 5：先写回归测试，再修复刷新逻辑。测试通过。</div></div>
+        <div class="chat-msg ai"><div class="chat-role a">AI</div><div class="chat-text">Phase 6：写入已知陷阱："页面状态刷新依赖项必须包含所有触发条件。" 完成。</div></div>
+      </div></div>
+      <p class="xs" style="margin-top:8px">修复后回到 /e2e-verify 或 /functional-test 继续验证。</p>
+    </div>
+  </div>
+</div><div class="sn">22 / 28</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 5: 提效与总览 (Slides 21-25)                               -->
+<!-- ============================================================ -->
+
+<!-- 21 呼吸 -->
+<section class="s breath" style="background:var(--amber-light)">
+<div><div class="bt">一个任务跑通了。<br>需求多了，怎么<span style="color:var(--amber-deep)">同时干几件事</span>？</div></div><div class="sn">23 / 28</div>
+</section>
+
+<!-- 22 并行开发 -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>并行开发 — 多个窗口同时干活</h2>
+  <div class="divider"></div>
+  <p class="sub">一个需求文档写好后，用 <strong>/to-issues</strong> 把它切成多个独立的小任务（Issue），然后同时开 2-3 个窗口并行干。</p>
+
+  <div class="vs-box" style="margin-top:20px">
+    <div class="vs-card" style="background:var(--rose-light)">
+      <p class="xs" style="font-weight:700;color:var(--rose)">水平切片（常见错误）</p>
+      <p class="sm" style="margin-top:8px">一个窗口写所有接口（后端），另一个写所有页面（前端）。<br><br>问题：合到一起才知道对不对。<strong>接口对不上 → 两边都要改 → 互相等。</strong></p>
+      <div style="margin-top:10px;padding:8px 12px;background:rgba(212,56,13,.08);border-radius:8px;font-size:12px;color:var(--rose);text-align:center">
+        窗口 A：写所有后端接口<br>窗口 B：写所有前端页面<br>→ 合并时才发现对不上
+      </div>
+    </div>
+    <div class="vs-card" style="background:var(--green-fog)">
+      <p class="xs" style="font-weight:700;color:var(--green-deep)">垂直切片（正确做法）</p>
+      <p class="sm" style="margin-top:8px">每个窗口做一个<strong>完整功能</strong>：从数据库到接口到页面，一刀到底。<br><br>每个切片独立可验证，不需要等别人。</p>
+      <div style="margin-top:10px;padding:8px 12px;background:rgba(31,170,95,.08);border-radius:8px;font-size:12px;color:var(--green-deep);text-align:center">
+        窗口 A：用户注册（数据库+接口+页面）<br>窗口 B：用户登录（数据库+接口+页面）<br>→ 各自独立可测试
+      </div>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-top:18px">
+    <div class="card">
+      <h4 style="color:var(--amber-deep)">/to-issues — 智能切片</h4>
+      <p class="sm" style="margin-top:6px">AI 读你的需求文档，自动按"垂直切片"原则拆分成多个独立的 Issue（任务工单）。每个 Issue 包含完整的验收标准和依赖关系。</p>
+      <p class="xs" style="margin-top:8px;color:var(--ink-muted)">Issue 就是一个写清楚要做什么的任务单，通常发到 GitHub（代码协作平台）上管理。</p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--teal)">什么时候能并行？</h4>
+      <p class="sm" style="margin-top:6px">
+        <strong style="color:var(--green-deep)">明显可并行：</strong>改界面 + 改后端逻辑 — 界面是用户看到的部分，后端是服务器处理数据的部分，互不干扰。<br><br>
+        <strong style="color:var(--rose)">不确定？就别并行。</strong>一个窗口一个窗口来，每个跑完 /e2e-verify 确认没问题再开下一个。
+      </p>
+    </div>
+  </div>
+</div><div class="sn">24 / 28</div>
+</section>
+
+<!-- 23 操作流程总览 -->
+<section class="s" style="background:var(--paper)">
+<div class="si">
+  <h2>完整操作流程</h2>
+  <p class="sub">一个完整任务从头到尾的步骤。绿色高亮 = 需要你参与。</p>
+  <div class="step-flow">
+    <div class="step-item active"><div class="step-n">第 1 步</div><div class="step-t">/grill</div><div class="step-s">聊需求</div></div>
+    <div class="step-item"><div class="step-n">可选</div><div class="step-t">/prototype</div><div class="step-s">验证想法</div></div>
+    <div class="step-item active"><div class="step-n">第 2 步</div><div class="step-t">/to-prd</div><div class="step-s">写需求</div></div>
+    <div class="step-item"><div class="step-n">可选</div><div class="step-t">/to-issues</div><div class="step-s">切片并行</div></div>
+  </div>
+  <div class="step-flow" style="margin-top:8px">
+    <div class="step-item"><div class="step-n">第 3 步</div><div class="step-t">/tdd</div><div class="step-s">测试驱动编码</div></div>
+    <div class="step-item"><div class="step-n">自动</div><div class="step-t">Review</div><div class="step-s">thermo + Codex</div></div>
+    <div class="step-item"><div class="step-n">自动</div><div class="step-t">/e2e-verify</div><div class="step-s">自动验证</div></div>
+    <div class="step-item active"><div class="step-n">第 4 步</div><div class="step-t">/functional-test</div><div class="step-s">手工测试</div></div>
+  </div>
+  <div style="margin-top:20px;display:flex;gap:12px;align-items:center">
+    <div style="width:12px;height:12px;background:var(--green-fog);border:1px solid var(--green-soft);border-radius:4px;flex-shrink:0"></div>
+    <span class="sm">绿色高亮 = 需要你参与的步骤（共 3 个）</span>
+  </div>
+  <div class="quote" style="margin-top:16px">
+    <strong>遇到 Bug？</strong>无论在 e2e 还是手测阶段发现，都用 /bugfix 处理，修完后继续验证流程。<br><br>
+    <strong>上下文快满了？</strong>用 /handoff 压缩交接，新会话从断点续传。
+  </div>
+</div><div class="sn">25 / 28</div>
+</section>
+
+<!-- 24 工具箱一览 -->
+<section class="s" style="background:var(--canvas)">
+<div class="si">
+  <h2>工具箱一览</h2>
+  <div class="divider"></div>
+  <div class="g2" style="margin-top:8px">
+    <div>
+      <div class="xs" style="font-weight:700;color:var(--green-deep);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">规划与需求</div>
+      <table class="tt"><tbody>
+        <tr><td class="tn">/grill</td><td>拷问想法、挖出细节</td><td class="sm" style="text-align:right">产品经理</td></tr>
+        <tr><td class="tn">/to-prd</td><td>对话 → 需求文档</td><td class="sm" style="text-align:right">写需求书</td></tr>
+        <tr><td class="tn">/prototype</td><td>快速原型验证</td><td class="sm" style="text-align:right">画草图</td></tr>
+        <tr><td class="tn">/to-issues</td><td>需求 → 垂直切片任务</td><td class="sm" style="text-align:right">切蛋糕</td></tr>
+      </tbody></table>
+      <div class="xs" style="font-weight:700;color:var(--amber-deep);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.5px">代码智能</div>
+      <table class="tt"><tbody>
+        <tr><td class="tn">LSP</td><td>跳转定义、查引用</td><td class="sm" style="text-align:right">代码字典</td></tr>
+        <tr><td class="tn">/lsp-setup</td><td>一键配置语言服务</td><td class="sm" style="text-align:right">装字典</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <div class="xs" style="font-weight:700;color:var(--violet);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">编码与审查</div>
+      <table class="tt"><tbody>
+        <tr><td class="tn">/tdd</td><td>测试驱动开发</td><td class="sm" style="text-align:right">先考再答</td></tr>
+        <tr><td class="tn">/bugfix</td><td>7 阶段诊断循环</td><td class="sm" style="text-align:right">医生问诊</td></tr>
+        <tr><td class="tn">thermo-nuclear</td><td>代码质量深度审查</td><td class="sm" style="text-align:right">代码柔术</td></tr>
+        <tr><td class="tn">/e2e-verify</td><td>验收标准验证</td><td class="sm" style="text-align:right">自动考试</td></tr>
+        <tr><td class="tn">/functional-test</td><td>分组手测 + AI 查数据</td><td class="sm" style="text-align:right">测试陪练</td></tr>
+      </tbody></table>
+      <div class="xs" style="font-weight:700;color:var(--teal);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.5px">辅助</div>
+      <table class="tt"><tbody>
+        <tr><td class="tn">/handoff</td><td>会话断点接力</td><td class="sm" style="text-align:right">交接班</td></tr>
+        <tr><td class="tn">/improve-arch</td><td>代码库质量改善</td><td class="sm" style="text-align:right">体检报告</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div><div class="sn">26 / 28</div>
+</section>
+
+<!-- 25 全局生命周期地图 -->
+<section class="s" style="background:var(--paper);padding-top:32px;padding-bottom:32px">
+<div class="si">
+  <h2>全局生命周期地图</h2>
+  <p class="xs" style="margin-bottom:8px">所有模块在整条管线中的位置和顺序。◆ = 需要你参与</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+    <div class="lm-row"><div class="lm-label" style="color:var(--ink-muted)">Phase 0<br>捕获</div><div class="lm-content"><div class="lm-node" style="background:var(--warm);border-color:var(--border);color:var(--ink-soft)">想法 / Bug / 反馈</div><span style="color:var(--ink-muted);font-size:11px">→</span><div class="lm-node" style="background:var(--blue-light);border-color:var(--blue);color:var(--blue)">Issue 工单</div></div></div>
+    <div class="lm-v"><div class="vl"></div></div>
+    <div class="lm-row"><div class="lm-label" style="color:var(--green-deep)">Phase 1<br>对齐</div><div class="lm-content" style="gap:4px"><div class="lm-node human" style="background:var(--green-fog);border-color:var(--green);color:var(--green-deep)">/grill ◆</div><span style="color:var(--ink-muted);font-size:10px">→</span><div class="lm-node" style="background:var(--warm);border-color:var(--border);color:var(--ink-muted);opacity:.8">/prototype</div><span style="color:var(--ink-muted);font-size:10px">→</span><div class="lm-node human" style="background:var(--green-fog);border-color:var(--green);color:var(--green-deep)">/to-prd ◆</div></div></div>
+    <div class="lm-v"><div class="vl"></div></div>
+    <div class="lm-row"><div class="lm-label" style="color:var(--amber-deep)">Phase 2<br>切片</div><div class="lm-content"><div class="lm-node" style="background:var(--amber-light);border-color:var(--amber);color:var(--amber-deep)">/to-issues</div><span class="xs">垂直切片 → 多窗口并行</span></div></div>
+    <div class="lm-v"><div class="vl"></div></div>
+    <div class="lm-split">
+      <div class="lm-split-col">
+        <div class="lm-split-hdr" style="background:var(--green-fog);color:var(--green-deep)">Feature 路径</div>
+        <div class="lm-v"><div class="vl"></div></div>
+        <div class="lm-node" style="background:var(--violet-light);border-color:var(--violet);color:var(--violet)">TDD 编码</div>
+      </div>
+      <div class="lm-split-col">
+        <div class="lm-split-hdr" style="background:var(--rose-light);color:var(--rose)">Bug 路径</div>
+        <div class="lm-v"><div class="vl"></div></div>
+        <div class="lm-node" style="background:var(--rose-light);border-color:var(--rose);color:var(--rose)">/bugfix 7 阶段</div>
+      </div>
+    </div>
+    <div class="lm-v"><div class="vl"></div></div>
+    <div class="lm-row"><div class="lm-label" style="color:var(--violet)">Phase 3<br>审查</div><div class="lm-content" style="gap:4px"><div class="lm-node" style="background:var(--violet-light);border-color:var(--violet);color:var(--violet)">thermo-nuclear</div><span style="color:var(--ink-muted);font-size:10px">+</span><div class="lm-node" style="background:var(--blue-light);border-color:var(--blue);color:var(--blue)">Codex Review</div></div></div>
+    <div class="lm-v"><div class="vl"></div></div>
+    <div class="lm-row"><div class="lm-label" style="color:var(--teal)">Phase 4<br>验证</div><div class="lm-content" style="gap:4px"><div class="lm-node" style="background:var(--teal-light);border-color:var(--teal);color:var(--teal)">/e2e-verify</div><span class="xs" style="color:var(--rose)">FAIL→/bugfix</span></div></div>
+    <div class="lm-v"><div class="vl"></div></div>
+    <div class="lm-row"><div class="lm-label" style="color:var(--green-deep)">Phase 5<br>手测</div><div class="lm-content"><div class="lm-node human" style="background:var(--green-fog);border-color:var(--green);color:var(--green-deep)">/functional-test ◆</div><span class="xs">Bug→/bugfix</span></div></div>
+    <div class="lm-v"><div class="vl" style="background:var(--amber)"></div></div>
+    <div class="lm-kb"><span>CONTEXT.md</span><span>docs/adr/</span><span>docs/specs/</span><span style="font-size:9px;color:var(--ink-muted)">← 全管线读写</span></div>
+  </div>
+</div><div class="sn">27 / 28</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 6: 结尾 (Slide 26)                                        -->
+<!-- ============================================================ -->
+
+<!-- 28 结尾 -->
+<section class="s breath" style="background:var(--paper)">
+<div style="text-align:center">
+  <div style="font-family:var(--serif);font-size:40px;font-weight:700;line-height:1.4">管好你的 <span style="color:var(--green)">AI Agent</span></div>
+  <div class="divider" style="margin:18px auto"></div>
+  <div class="g3" style="max-width:640px;margin:28px auto 0">
+    <div style="padding:18px;background:var(--green-fog);border-radius:12px"><div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--green)">壹</div><div class="sm" style="font-weight:600;margin-top:4px">让 AI 变聪明</div><div class="xs" style="margin-top:6px">管好上下文<br>让它待在聪明区</div></div>
+    <div style="padding:18px;background:var(--amber-light);border-radius:12px"><div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--amber)">贰</div><div class="sm" style="font-weight:600;margin-top:4px">给好工具<br>最小必要干预</div><div class="xs" style="margin-top:6px">预置经验 + 循环防漂<br>给空间，不管死</div></div>
+    <div style="padding:18px;background:var(--violet-light);border-radius:12px"><div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--violet)">叁</div><div class="sm" style="font-weight:600;margin-top:4px">反制 AI slop</div><div class="xs" style="margin-top:6px">方法论约束<br>从源头消灭垃圾代码</div></div>
+  </div>
+  <p style="margin-top:32px;font-size:17px;color:var(--ink-soft);max-width:480px;margin-left:auto;margin-right:auto;line-height:1.9">你做决策，Agent 做执行。<br>相信它。</p>
+  <p style="margin-top:28px;font-size:14px;color:var(--ink-muted)">— 夙愿</p>
+</div><div class="sn">28 / 28</div>
+</section>
+
+<script>
+const S=document.querySelectorAll('.s'),N=document.getElementById('pn');
+S.forEach((_,i)=>{const d=document.createElement('button');d.className='pd';d.onclick=()=>S[i].scrollIntoView({behavior:'smooth'});N.appendChild(d)});
+const D=N.querySelectorAll('.pd');
+const O=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){const i=[...S].indexOf(e.target);D.forEach((d,j)=>d.classList.toggle('on',j===i))}})},{threshold:.4});
+S.forEach(s=>O.observe(s));
+document.addEventListener('keydown',e=>{const c=[...D].findIndex(d=>d.classList.contains('on'));if((e.key==='ArrowDown'||e.key==='ArrowRight'||e.key===' ')&&c<S.length-1){e.preventDefault();S[c+1].scrollIntoView({behavior:'smooth'})}else if((e.key==='ArrowUp'||e.key==='ArrowLeft')&&c>0){e.preventDefault();S[c-1].scrollIntoView({behavior:'smooth'})}});
+</script>
+</body>
+</html>
