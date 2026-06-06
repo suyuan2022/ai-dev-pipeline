@@ -7,7 +7,7 @@
 ## 安装
 
 ```bash
-git clone https://github.com/suyuanzhao/ai-dev-pipeline.git
+git clone https://github.com/suyuan2022/ai-dev-pipeline.git
 cd ai-dev-pipeline
 
 # 链接到 Claude Code
